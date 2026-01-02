@@ -1,3 +1,7 @@
+<p align="center">
+  <img width="128" height="128" alt="boxes1" src="https://github.com/user-attachments/assets/43a8a181-9a04-40d7-8e9f-5350819ade63" />
+</p>
+
 # TabGrid
 
 🧩 **Intelligently organize your browser tabs into a clean grid using AI**
@@ -27,7 +31,6 @@ See TabGrid in action! Watch how it transforms a cluttered browser into an organ
 
 <img width="1440" height="166" alt="Screenshot 2026-01-02 at 4 11 43 PM" src="https://github.com/user-attachments/assets/ba310feb-0f0f-4f17-bcf0-030806448be4" />
 
-
 ---
 
 **After:** Tabs organized into logical groups
@@ -38,7 +41,7 @@ See TabGrid in action! Watch how it transforms a cluttered browser into an organ
 <img width="1440" height="165" alt="Screenshot 2026-01-02 at 3 55 16 PM" src="https://github.com/user-attachments/assets/6735f030-e901-46fe-8062-0cc067e8cc6e" />
 
 
-### How It Works
+## How It Works
 
 1. **Click the TabGrid icon** or press `Ctrl+Shift+X` (Mac: `Cmd+Shift+X`)
 2. Watch as your tabs are automatically grouped by:
