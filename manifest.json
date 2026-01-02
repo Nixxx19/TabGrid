@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "TabGrid",
+  "version": "0.0.1",
+  "author": "nityam",
+  "description": "Groups open tabs into clusters using AI.",
+  "icons": {
+    "16": "icon/boxes.png",
+    "48": "icon/boxes.png",
+    "128": "icon/boxes.png"
+  },
+  "permissions": ["tabs", "tabGroups", "storage"],
+  "host_permissions": [
+    "<all_urls>",
+    "https://openrouter.ai/*"
+  ],
+  "background": {
+    "service_worker": "service.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "TabGrid Extension | Press Ctrl+Shift+X (Cmd+Shift+X on Mac)"
+  },
+  "commands": {
+    "toggle-group-tabs": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+X",
+        "mac": "Command+Shift+X"
+      },
+      "description": "Group or ungroup all tabs in the current window"
+    }
+  },
+  "incognito": "split"
+}
