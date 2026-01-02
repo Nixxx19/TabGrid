@@ -144,15 +144,6 @@ If you want to use your own OpenRouter API key instead:
 - Chrome Tab Groups API
 - OpenRouter AI API (optional)
 
-## 📝 How Tab Grouping Works
-
-TabGrid groups tabs based on:
-
-- **Same website/service**: All tabs from the same domain (e.g., all discord.com tabs together)
-- **Related services**: Services from the same company (e.g., gmail.com + drive.google.com = "Google")
-- **Similar purpose**: Tabs serving similar functions (e.g., documentation sites, social media)
-- **Related topics**: Tabs about the same project or topic
-
 ## 🐛 Troubleshooting
 
 ### Extension not working?
