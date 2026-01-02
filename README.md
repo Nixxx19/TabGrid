@@ -40,17 +40,7 @@ See TabGrid in action! Watch how it transforms a cluttered browser into an organ
 
 <img width="1440" height="165" alt="Screenshot 2026-01-02 at 3 55 16 PM" src="https://github.com/user-attachments/assets/6735f030-e901-46fe-8062-0cc067e8cc6e" />
 
-
-## How It Works
-
-1. **Click the TabGrid icon** or press `Ctrl+Shift+X` (Mac: `Cmd+Shift+X`)
-2. Watch as your tabs are automatically grouped by:
-   - **Same website** (e.g., all GitHub tabs together)
-   - **Related services** (e.g., Gmail + Google Drive = "Google Services")
-   - **Similar purpose** (e.g., documentation sites, social media)
-   - **Related topics** (e.g., project-specific tabs)
-3. **Click again** to ungroup all tabs instantly
-
+###
 > 💡 **Tip**: Groups with 2 or fewer tabs automatically collapse to keep your tab bar clean!
 
 ## 🚀 Installation
@@ -86,14 +76,14 @@ If you want to create a packaged extension file:
 
 ## ⌨️ Usage
 
-### Keyboard Shortcut
+### Keyboard Shortcut:
 - **Windows/Linux**: `Ctrl+Shift+X`
 - **Mac**: `Cmd+Shift+X`
 
-### Manual Activation
+### Manual Activation:
 - Click the TabGrid icon in your Chrome toolbar
 
-### How It Works
+### How It Works:
 
 1. **Grouping Tabs**: Click the icon or press the keyboard shortcut
    - The extension analyzes all open tabs
@@ -109,6 +99,14 @@ If you want to create a packaged extension file:
    - **No badge**: Tabs are ungrouped
    - **Yellow "AI" badge**: AI grouping in progress
    - **Red "!" badge**: Error occurred
+
+### Smart Group Ordering:
+
+TabGrid doesn’t just group tabs — it also **organizes groups based on how you actually use them**:
+
+- **Active tab priority**: The group containing your currently active tab is always placed on the far right
+- **Usage-based sorting**: Groups are ordered by the most recently accessed tab within each group
+- **Effortless access**: Your most relevant and active groups stay within easy reach
 
 ## 🔧 Configuration
 
