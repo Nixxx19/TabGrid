@@ -28,7 +28,7 @@ See TabGrid in action! Watch how it transforms a cluttered browser into an organ
 <img width="1440" height="166" alt="Screenshot 2026-01-02 at 4 11 43 PM" src="https://github.com/user-attachments/assets/ba310feb-0f0f-4f17-bcf0-030806448be4" />
 
 
-##
+---
 
 **After:** Tabs organized into logical groups
 - Clean, organized tab groups
@@ -148,7 +148,7 @@ If you want to use your own OpenRouter API key instead:
 TabGrid groups tabs based on:
 
 - **Same website/service**: All tabs from the same domain (e.g., all discord.com tabs together)
-- **Related services**: Services from the same company (e.g., gmail.com + drive.google.com = "Google Services")
+- **Related services**: Services from the same company (e.g., gmail.com + drive.google.com = "Google")
 - **Similar purpose**: Tabs serving similar functions (e.g., documentation sites, social media)
 - **Related topics**: Tabs about the same project or topic
 
