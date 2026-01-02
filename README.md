@@ -14,6 +14,42 @@ TabGrid is a Chrome extension that automatically groups your open tabs into logi
 - **Incognito Support**: Works seamlessly in both normal and incognito windows
 - **Automatic Organization**: Groups tabs by domain, related services, and similar purposes
 
+## 🎬 Demo
+
+### Visual Comparison
+
+See TabGrid in action! Watch how it transforms a cluttered browser into an organized workspace.
+
+**Before:** Multiple unorganized tabs cluttering your browser
+- Hard to find specific tabs
+- No logical grouping
+- Overwhelming tab bar
+
+<img width="1440" height="166" alt="Screenshot 2026-01-02 at 4 11 43 PM" src="https://github.com/user-attachments/assets/ba310feb-0f0f-4f17-bcf0-030806448be4" />
+
+
+##
+
+**After:** Tabs organized into logical groups
+- Clean, organized tab groups
+- Easy to find related tabs
+- Collapsed groups save space
+
+<img width="1440" height="165" alt="Screenshot 2026-01-02 at 3 55 16 PM" src="https://github.com/user-attachments/assets/6735f030-e901-46fe-8062-0cc067e8cc6e" />
+
+
+### How It Works
+
+1. **Click the TabGrid icon** or press `Ctrl+Shift+X` (Mac: `Cmd+Shift+X`)
+2. Watch as your tabs are automatically grouped by:
+   - **Same website** (e.g., all GitHub tabs together)
+   - **Related services** (e.g., Gmail + Google Drive = "Google Services")
+   - **Similar purpose** (e.g., documentation sites, social media)
+   - **Related topics** (e.g., project-specific tabs)
+3. **Click again** to ungroup all tabs instantly
+
+> 💡 **Tip**: Groups with 2 or fewer tabs automatically collapse to keep your tab bar clean!
+
 ## 🚀 Installation
 
 ### Method 1: Load Unpacked Extension (Recommended)
@@ -73,13 +109,17 @@ If you want to create a packaged extension file:
 
 ## 🔧 Configuration
 
-### AI-Powered Grouping (Optional)
+### AI-Powered Grouping
 
-The extension uses OpenRouter for AI-powered grouping. To use AI features:
+The extension uses OpenRouter for AI-powered grouping. **An API key is already configured** - the extension works out of the box!
+
+**Optional: Use Your Own API Key**
+
+If you want to use your own OpenRouter API key instead:
 
 1. Get an API key from [OpenRouter](https://openrouter.ai)
 2. Open `service.js` in a text editor
-3. Find the `PROVIDER_CONFIGS` section (around line 75)
+3. Find the `PROVIDER_CONFIGS` section (around line 83)
 4. Replace the API key with your own:
    ```javascript
    const PROVIDER_CONFIGS = {
@@ -87,7 +127,7 @@ The extension uses OpenRouter for AI-powered grouping. To use AI features:
    };
    ```
 
-**Note**: The extension works perfectly fine without AI configuration - it will automatically use intelligent domain-based grouping as a fallback.
+**Note**: The extension works perfectly fine with the default API key - no configuration needed! It will automatically use intelligent domain-based grouping as a fallback if AI is unavailable.
 
 ## 📦 Permissions
 
