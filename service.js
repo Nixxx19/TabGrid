@@ -220,20 +220,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 async function handleGroupTabs() {
-  const tabs = await getNormalWindowTabs();
+  // Overall timeout: 45 seconds for the entire operation
+  const OVERALL_TIMEOUT_MS = 45000;
+  
+  const operationPromise = (async () => {
+    const tabs = await getNormalWindowTabs();
 
-  const simplified = tabs.map((tab) => ({
-    id: tab.id,
-    index: tab.index, // Preserve index for ordering
-    active: tab.active || false, // Preserve active state
-    lastAccessed: tab.lastAccessed || 0, // Preserve last accessed time for sorting
-    title: tab.title || "",
-    url: tab.url || "",
-  }));
+    const simplified = tabs.map((tab) => ({
+      id: tab.id,
+      index: tab.index, // Preserve index for ordering
+      active: tab.active || false, // Preserve active state
+      lastAccessed: tab.lastAccessed || 0, // Preserve last accessed time for sorting
+      title: tab.title || "",
+      url: tab.url || "",
+    }));
 
-  const groups = naiveGroupTabs(simplified);
+    const groups = naiveGroupTabs(simplified);
 
-  await applyChromeTabGroups(groups);
+    await applyChromeTabGroups(groups);
+  })();
+
+  const timeoutPromise = new Promise((_, reject) => 
+    setTimeout(() => reject(new Error(`Grouping operation timeout after ${OVERALL_TIMEOUT_MS}ms`)), OVERALL_TIMEOUT_MS)
+  );
+
+  await Promise.race([operationPromise, timeoutPromise]);
 }
 
 // Extract base domain (e.g., "google.com" from "mail.google.com")
@@ -409,9 +420,14 @@ async function applyChromeTabGroups(groups) {
       const sortedTabs = [...tabs].sort((a, b) => (a.index || 0) - (b.index || 0));
       
       // Move each tab to the correct position in sequence
+      // Add timeout protection for each tab move (2 seconds per tab)
       for (const tab of sortedTabs) {
         try {
-          await chrome.tabs.move(tab.id, { index: currentIndex });
+          const movePromise = chrome.tabs.move(tab.id, { index: currentIndex });
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error(`Tab move timeout for tab ${tab.id}`)), 2000)
+          );
+          await Promise.race([movePromise, timeoutPromise]);
           currentIndex++;
         } catch (moveError) {
           console.error(`Failed to move tab ${tab.id}:`, moveError);
@@ -424,21 +440,36 @@ async function applyChromeTabGroups(groups) {
       
       // Note: Chrome requires at least 2 tabs to create a group
       // If there's only 1 tab, the group() call will fail, but we try anyway
-      const groupId = await chrome.tabs.group({ tabIds: sortedTabIds });
-      
       // Collapse logic: 
       // - Groups with 2 or fewer tabs are collapsed UNLESS they contain the active tab
       // - Groups with 3+ tabs stay open
       const containsActiveTab = tabs.some(t => t.id === activeTabId);
       const shouldCollapse = tabIds.length <= 2 && !containsActiveTab;
       
-      await chrome.tabGroups.update(groupId, {
-        title: groupName,
-        collapsed: shouldCollapse,
-      });
-      
-      const status = shouldCollapse ? "collapsed" : "open";
-      console.log(`Created Chrome tab group "${groupName}" with ${tabIds.length} tabs (${status})`);
+      // Add timeout for group creation (5 seconds)
+      try {
+        const groupPromise = chrome.tabs.group({ tabIds: sortedTabIds });
+        const groupTimeout = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Tab group creation timeout')), 5000)
+        );
+        const groupId = await Promise.race([groupPromise, groupTimeout]);
+        
+        const updatePromise = chrome.tabGroups.update(groupId, {
+          title: groupName,
+          collapsed: shouldCollapse,
+        });
+        const updateTimeout = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Tab group update timeout')), 3000)
+        );
+        await Promise.race([updatePromise, updateTimeout]);
+        
+        const status = shouldCollapse ? "collapsed" : "open";
+        console.log(`Created Chrome tab group "${groupName}" with ${tabIds.length} tabs (${status})`);
+      } catch (groupError) {
+        // If group creation/update times out or fails, continue with next group
+        console.error(`Group operation failed for "${groupName}":`, groupError);
+        throw groupError; // Re-throw to be caught by outer try-catch
+      }
     } catch (e) {
       // If grouping fails (e.g., single tab), log but continue
       if (tabIds.length === 1) {
@@ -499,48 +530,101 @@ function extractDomain(url) {
 
 // AI-powered tab grouping
 async function handleGroupTabsAI(provider, apiKey) {
-  const tabs = await getNormalWindowTabs();
+  // Overall timeout: 60 seconds for the entire operation
+  const OVERALL_TIMEOUT_MS = 60000;
+  
+  const operationPromise = (async () => {
+    const tabs = await getNormalWindowTabs();
 
-  // Enhanced tab data with more context
-  const simplified = tabs.map((tab) => {
-    const domain = extractDomain(tab.url || "");
-    const lastAccessed = tab.lastAccessed || 0;
-    const relativeTime = formatRelativeTime(lastAccessed);
-    
-    return {
-      id: tab.id,
-      index: tab.index, // Preserve index for ordering
-      title: tab.title || "",
-      url: tab.url || "",
-      domain: domain,
-      lastAccessed: lastAccessed,
-      lastAccessedRelative: relativeTime,
-      // Additional metadata that might be useful
-      active: tab.active || false,
-      pinned: tab.pinned || false,
-    };
-  });
+    // Enhanced tab data with more context
+    const simplified = tabs.map((tab) => {
+      const domain = extractDomain(tab.url || "");
+      const lastAccessed = tab.lastAccessed || 0;
+      const relativeTime = formatRelativeTime(lastAccessed);
+      
+      return {
+        id: tab.id,
+        index: tab.index, // Preserve index for ordering
+        title: tab.title || "",
+        url: tab.url || "",
+        domain: domain,
+        lastAccessed: lastAccessed,
+        lastAccessedRelative: relativeTime,
+        // Additional metadata that might be useful
+        active: tab.active || false,
+        pinned: tab.pinned || false,
+      };
+    });
+
+    try {
+      const groups = await aiGroupTabs(simplified, provider, apiKey);
+      await applyChromeTabGroups(groups);
+    } catch (error) {
+      console.error("AI grouping failed, falling back to naive grouping:", error);
+      const groups = naiveGroupTabs(simplified);
+      await applyChromeTabGroups(groups);
+    }
+  })();
+
+  const timeoutPromise = new Promise((_, reject) => 
+    setTimeout(() => reject(new Error(`Operation timeout after ${OVERALL_TIMEOUT_MS}ms`)), OVERALL_TIMEOUT_MS)
+  );
 
   try {
-    const groups = await aiGroupTabs(simplified, provider, apiKey);
-    await applyChromeTabGroups(groups);
+    await Promise.race([operationPromise, timeoutPromise]);
   } catch (error) {
-    console.error("AI grouping failed, falling back to naive grouping:", error);
-    const groups = naiveGroupTabs(simplified);
-    await applyChromeTabGroups(groups);
+    if (error.message.includes('timeout')) {
+      console.error("Tab grouping operation timed out, attempting fallback");
+      // Try to fallback to naive grouping if overall timeout occurs
+      try {
+        const tabs = await getNormalWindowTabs();
+        const simplified = tabs.map((tab) => ({
+          id: tab.id,
+          index: tab.index,
+          title: tab.title || "",
+          url: tab.url || "",
+          active: tab.active || false,
+          pinned: tab.pinned || false,
+          lastAccessed: tab.lastAccessed || 0,
+        }));
+        const groups = naiveGroupTabs(simplified);
+        await applyChromeTabGroups(groups);
+      } catch (fallbackError) {
+        console.error("Fallback grouping also failed:", fallbackError);
+        throw error; // Throw original timeout error
+      }
+    } else {
+      throw error;
+    }
   }
 }
 
 // Ungroup all tabs
 async function handleUngroupTabs() {
-  try {
+  // Overall timeout: 15 seconds for ungrouping
+  const OVERALL_TIMEOUT_MS = 15000;
+  
+  const operationPromise = (async () => {
     const tabs = await getNormalWindowTabs();
     const tabIds = tabs.map(tab => tab.id).filter(Boolean);
 
     if (tabIds.length > 0) {
-      await chrome.tabs.ungroup(tabIds);
+      // Add timeout for ungroup operation (10 seconds)
+      const ungroupPromise = chrome.tabs.ungroup(tabIds);
+      const ungroupTimeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Ungroup operation timeout')), 10000)
+      );
+      await Promise.race([ungroupPromise, ungroupTimeout]);
       console.log(`Ungrouped ${tabIds.length} tabs`);
     }
+  })();
+
+  const timeoutPromise = new Promise((_, reject) => 
+    setTimeout(() => reject(new Error(`Ungrouping operation timeout after ${OVERALL_TIMEOUT_MS}ms`)), OVERALL_TIMEOUT_MS)
+  );
+
+  try {
+    await Promise.race([operationPromise, timeoutPromise]);
   } catch (error) {
     console.error("Error ungrouping tabs:", error);
     throw error;
@@ -612,21 +696,37 @@ async function testApiKey(provider, apiKey) {
       max_tokens: 10
     };
 
+    // Add timeout to prevent hanging (15 seconds for test)
+    const TIMEOUT_MS = 15000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-    const response = await fetch(config.endpoint, {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify(testBody)
-    });
+    try {
+      const response = await fetch(config.endpoint, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(testBody),
+        signal: controller.signal
+      });
 
-    console.log(`Test response status: ${response.status} ${response.statusText}`);
+      clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('API Error response:', errorText);
+      console.log(`Test response status: ${response.status} ${response.statusText}`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error response:', errorText);
+      }
+
+      return response.status !== 401 && response.status !== 402 && response.status !== 404;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        console.error(`API key test timeout after ${TIMEOUT_MS}ms`);
+        return false;
+      }
+      throw error;
     }
-
-    return response.status !== 401 && response.status !== 402 && response.status !== 404;
   } catch (error) {
     console.error(`API key test failed for ${provider}:`, error);
     return false;
@@ -657,32 +757,54 @@ async function callAIProvider(provider, apiKey, prompt) {
 
   console.log(`Calling ${provider} API at ${config.endpoint}`);
 
-  const response = await fetch(config.endpoint, {
-    method: 'POST',
-    headers: headers,
-    body: JSON.stringify(requestBody)
-  });
+  // Add timeout to prevent hanging (30 seconds)
+  const TIMEOUT_MS = 30000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-  if (!response.ok) {
-    let errorMessage = `API call failed: ${response.status} ${response.statusText}`;
+  try {
+    const response = await fetch(config.endpoint, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(requestBody),
+      signal: controller.signal
+    });
 
-    // Add specific guidance for common errors
-    if (response.status === 401) {
-      errorMessage += ' - Invalid API key. Please check your API key.';
-    } else if (response.status === 402) {
-      errorMessage += ' - Payment required. Check your account balance/credits.';
-    } else if (response.status === 429) {
-      errorMessage += ' - Rate limit exceeded. Please try again later.';
-    } else if (response.status === 403) {
-      errorMessage += ' - Access forbidden. Check API key permissions.';
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      let errorMessage = `API call failed: ${response.status} ${response.statusText}`;
+
+      // Add specific guidance for common errors
+      if (response.status === 401) {
+        errorMessage += ' - Invalid API key. Please check your API key.';
+      } else if (response.status === 402) {
+        errorMessage += ' - Payment required. Check your account balance/credits.';
+      } else if (response.status === 429) {
+        errorMessage += ' - Rate limit exceeded. Please try again later.';
+      } else if (response.status === 403) {
+        errorMessage += ' - Access forbidden. Check API key permissions.';
+      }
+
+      throw new Error(errorMessage);
     }
 
-    throw new Error(errorMessage);
+    // Add timeout for JSON parsing as well
+    const jsonPromise = response.json();
+    const jsonTimeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('JSON parsing timeout')), 5000)
+    );
+    const data = await Promise.race([jsonPromise, jsonTimeout]);
+    
+    console.log(`API response from ${provider}:`, data);
+    return extractResponseText(data, provider);
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError' || error.message === 'JSON parsing timeout') {
+      throw new Error(`API call timeout after ${TIMEOUT_MS}ms. The API may be slow or unresponsive.`);
+    }
+    throw error;
   }
-
-  const data = await response.json();
-  console.log(`API response from ${provider}:`, data);
-  return extractResponseText(data, provider);
 }
 
 // Extract text from API response
